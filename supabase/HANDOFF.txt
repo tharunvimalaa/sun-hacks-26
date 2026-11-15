@@ -412,6 +412,36 @@ Nothing merged or deployed; features remain off. Do NOT run these steps again.
       select cron.schedule('qualitrail-purge', '15 3 * * *',
         $$select public.signoff_purge_pii(90); select public.sup_purge_pii(90); select public.email_purge_old(30);$$);
 
+STATUS 2026-11-15 (after merge): steps 5, 6 (URLs, SMTP), 7, 8 and 9 (except rotation) DONE. PRs #6-#9 merged;
+production runs main 77629ed. Resend domain mail.proofisinthepiping.work verified; Supabase custom SMTP through
+Resend; email rate limit 10/hour; webhook signature-verified (signed email.delivered events stored). Production has
+APP_BASE_URL, RESEND_API_KEY, RESEND_FROM, RESEND_WEBHOOK_SECRET, SIGNUP_MODE, SIGNUP_ALLOWLIST (stored as hidden
+Secrets; values cannot be read back). EMAIL_MODE, SIGNOFF_ENABLED, SUPERVISOR_REVIEW_ENABLED unset (off).
+Hosted test passed: allowlisted sign-up -> confirmation -> onboarding (technician only) -> reset -> new password;
+a non-allowlisted address got the same screen, no Auth account and no email. Alex, Jordan, Sam unchanged.
+SIGNUP_MODE and APP_BASE_URL were edited again at 09:50 UTC and production redeployed at 09:51 from the same
+Vercel account, outside the tested sequence: re-set and verify both before further testing.
+
+ACCESS BOUNDARY (read before opening access more widely)
+- SIGNUP_MODE / SIGNUP_ALLOWLIST are enforced by THIS APP's routes only: /api/auth/signup decides whether the app
+  asks Supabase to create an account, and /api/onboarding decides who gets a technician (or reviewer) profile.
+- They do NOT restrict the shared Supabase project. Supabase Auth sign-up is ON, so any client holding the public
+  URL and publishable key (a browser console, a script, another copy of this app such as a local dev server with
+  different settings, possibly a local app writing with the secret key) can create an Auth account, and since custom SMTP is on, make
+  Supabase send a confirmation email from mail.proofisinthepiping.work to any address (only the 10/hour rate
+  limit applies).
+- A bare Auth account gets no profile and no data: RLS ties every row to the caller's own workers row, and the
+  production app refuses onboarding outside the policy. But another app instance using the SECRET key with
+  different settings can create profiles directly; nothing in the database enforces the allowlist.
+- Needed before broader access, each a separate approved change:
+  1. A Supabase "Before User Created" auth hook (Postgres function) that rejects addresses not on a server-side
+     allowlist table or without an open invitation, so the rule holds for every client and no stray email is sent.
+     Alternatively turn Supabase sign-up off and create accounts only via invitations/admin.
+  2. Keep the allowlist in the database (not only an env var) so the hook and the app read one source.
+  3. CAPTCHA (Supabase Auth -> Bot protection) on sign-up and recovery.
+  4. Separate Supabase projects for local development and production, so local apps can't write production rows.
+  5. Leaked-password protection on; rotate the credentials pasted into chat (step 10).
+
 HOSTED ACCEPTANCE (fictional identities; real inboxes you control)
 - Alex, Jordan, Sam sign in unchanged; Sam stays 2 of 4.
 - Allowlisted sign-up: real email from <sub>, link confirms, onboarding works; non-allowlisted gets no account email.
