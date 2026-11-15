@@ -420,20 +420,38 @@ Secrets; values cannot be read back). EMAIL_MODE, SIGNOFF_ENABLED, SUPERVISOR_RE
 Hosted test passed: allowlisted sign-up -> confirmation -> onboarding (technician only) -> reset -> new password;
 a non-allowlisted address got the same screen, no Auth account and no email. Alex, Jordan, Sam unchanged.
 SIGNUP_MODE and APP_BASE_URL were edited again at 09:50 UTC and production redeployed at 09:51 from the same
-Vercel account, outside the tested sequence: re-set and verify both before further testing.
+Vercel account by the project partner (authorized). Both were re-set at 10:05 UTC; sign-up was later opened at 10:49.
 
-HOSTED FEATURE TEST 2026-11-15 (both features left ON, sign-up still allowlist-only)
-- Deployments: baseline dpl_AN9n5Mq2gog6gLVLd1zb49bgzmoU (flags off) -> customer dpl_2NbCteqQNc2jfXFQ5sJ9addZaXGs
-  (EMAIL_MODE=resend, SIGNOFF_ENABLED=true) -> current dpl_7VNqjgtrXhRqchsodhgkpjMJje1Q (+SUPERVISOR_REVIEW_ENABLED=true).
-  Rollback: vercel rollback to dpl_2Nb... (review off) or dpl_AN9n... (both off); then set the flags false and redeploy.
+CURRENT PRODUCTION (2026-11-15 10:51 UTC)
+- Deployment dpl_9J1FfvwQRDerCLjbUpV3B3hfgs5Z (qualitrail-qinq398h3), main 77629ed, https://www.proofisinthepiping.work
+- EMAIL_MODE=resend, SIGNOFF_ENABLED=true, SUPERVISOR_REVIEW_ENABLED=true.
+- SIGNUP_MODE=open (owner-approved 10:49 UTC): any confirmed email can create a technician profile. SIGNUP_ALLOWLIST
+  is ignored in open mode; it was last written at 10:48 UTC and its value can't be read back (hidden Secret):
+  re-set it explicitly before switching back to allowlist.
+- APP_BASE_URL, RESEND_API_KEY/FROM/WEBHOOK_SECRET, SIGNOFF_PEPPER set (hidden Secrets).
+- Rollback targets (vercel rollback, instant; then align the env vars and redeploy so the next deploy matches):
+    dpl_7VNqjgtrXhRqchsodhgkpjMJje1Q  both features on, sign-up allowlist
+    dpl_2NbCteqQNc2jfXFQ5sJ9addZaXGs  customer sign-off on, supervisor review off, allowlist
+    dpl_AN9n5Mq2gog6gLVLd1zb49bgzmoU  both features off, allowlist
+- Open sign-up shares Supabase's 10/hour auth-email limit; any technician can email customers/supervisors from
+  mail.proofisinthepiping.work (per-account limits only). See ACCESS BOUNDARY below.
+
+HOSTED FEATURE TEST 2026-11-15
+- Deployments: baseline dpl_AN9n... (flags off) -> customer dpl_2Nb... -> supervisor dpl_7VNq...; no rollback needed.
+- Regression checks rewritten for features ON (Alex): 16/16 signed in, 24/24 signed out, unrelated-account refusal
+  5/5; invalid write requests are rejected by validation before anything is written or sent.
 - Passed live: customer invitation/gate/code (wrong code rejected and counted)/acknowledgment/receipt/notice;
   supervisor invite/sign-up/reviewer-only profile/accept/notification/single-task confirmation/notice; PDF sharing
   off by default, on only with consent, denied after the connection ended; technician and an unrelated account
   refused on supervisor endpoints; packet from a real saved run has no address, signature or comment; editing a
   record bumps the version, makes the run stale, labels earlier attestations "Changed since ...", blocks printing.
   21 signed email.delivered webhook events. Alex, Jordan, Sam unchanged.
-- Not tested live: a different account accepting a forwarded invitation; bounce/complaint suppression.
-- Test data kept: worker "Inbox A Test (fictional)" (2 records), reviewer account (+sup alias), their requests.
+- Not tested live: a different account accepting a forwarded invitation; bounce/complaint suppression
+  (email.bounced/email.complained webhooks); delivery_delayed/failed handling; customer "request correction" and
+  "decline", and the opt-out link; reminders/resends; request expiry; account lockout after 10 wrong codes;
+  sign-up confirmation in open mode beyond the owner's own attempt; retention purge (pg_cron not scheduled).
+- Test data kept: worker "Inbox A Test (fictional)" (2 records, sample opportunity, current match run),
+  reviewer account (+sup alias, connection ended), their acknowledgments and reviews.
 
 ACCESS BOUNDARY (read before opening access more widely)
 - SIGNUP_MODE / SIGNUP_ALLOWLIST are enforced by THIS APP's routes only: /api/auth/signup decides whether the app
