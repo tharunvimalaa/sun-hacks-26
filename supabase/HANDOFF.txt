@@ -422,6 +422,19 @@ a non-allowlisted address got the same screen, no Auth account and no email. Ale
 SIGNUP_MODE and APP_BASE_URL were edited again at 09:50 UTC and production redeployed at 09:51 from the same
 Vercel account, outside the tested sequence: re-set and verify both before further testing.
 
+HOSTED FEATURE TEST 2026-11-15 (both features left ON, sign-up still allowlist-only)
+- Deployments: baseline dpl_AN9n5Mq2gog6gLVLd1zb49bgzmoU (flags off) -> customer dpl_2NbCteqQNc2jfXFQ5sJ9addZaXGs
+  (EMAIL_MODE=resend, SIGNOFF_ENABLED=true) -> current dpl_7VNqjgtrXhRqchsodhgkpjMJje1Q (+SUPERVISOR_REVIEW_ENABLED=true).
+  Rollback: vercel rollback to dpl_2Nb... (review off) or dpl_AN9n... (both off); then set the flags false and redeploy.
+- Passed live: customer invitation/gate/code (wrong code rejected and counted)/acknowledgment/receipt/notice;
+  supervisor invite/sign-up/reviewer-only profile/accept/notification/single-task confirmation/notice; PDF sharing
+  off by default, on only with consent, denied after the connection ended; technician and an unrelated account
+  refused on supervisor endpoints; packet from a real saved run has no address, signature or comment; editing a
+  record bumps the version, makes the run stale, labels earlier attestations "Changed since ...", blocks printing.
+  21 signed email.delivered webhook events. Alex, Jordan, Sam unchanged.
+- Not tested live: a different account accepting a forwarded invitation; bounce/complaint suppression.
+- Test data kept: worker "Inbox A Test (fictional)" (2 records), reviewer account (+sup alias), their requests.
+
 ACCESS BOUNDARY (read before opening access more widely)
 - SIGNUP_MODE / SIGNUP_ALLOWLIST are enforced by THIS APP's routes only: /api/auth/signup decides whether the app
   asks Supabase to create an account, and /api/onboarding decides who gets a technician (or reviewer) profile.
